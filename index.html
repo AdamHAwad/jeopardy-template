@@ -514,9 +514,14 @@
                 </div>
                 <div id="playModalAnswer" style="font-size: 1.3em; text-align: center; margin: 30px 0; padding: 20px; background: #d4edda; border-radius: 10px; display: none;"></div>
             </div>
+            <div id="stealPlayerSelection" style="display: none; margin: 20px 0; text-align: center;">
+                <h4 style="color: #ff6b35; margin-bottom: 15px;">Select Player to Steal:</h4>
+                <div id="stealPlayerButtons" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;"></div>
+            </div>
             <div class="modal-buttons">
                 <button class="btn btn-success" onclick="markCorrect()">✅ Correct</button>
                 <button class="btn btn-warning" onclick="markIncorrect()">❌ Incorrect</button>
+                <button class="btn" id="stealBtn" onclick="enableSteal()" style="background: #ff6b35; color: white; display: none;">🔄 Enable Steal</button>
                 <button class="btn" onclick="closePlayModal()" style="background: #6c757d; color: white;">Close</button>
             </div>
         </div>
@@ -583,6 +588,8 @@
         };
         let currentPlayerIndex = 0;
         let isRoundActive = false;
+        let isStealMode = false;
+        let originalPlayerIndex = 0;
 
         // Initialize the board
         function initializeBoard() {
@@ -924,6 +931,7 @@
                     <li>During a round, only the current player can answer</li>
                     <li>Click on value cells to reveal questions</li>
                     <li>Mark answers as correct or incorrect to track scores</li>
+                    <li>If a player gets it wrong, other players can steal for double points!</li>
                     <li>Use "Next Player" to rotate turns</li>
                 `;
                 
@@ -1025,13 +1033,40 @@
                 
                 playSound('correct');
                 closePlayModal();
-                setStatus(`✅ Correct! ${currentPlayer.name} +$${points}`);
+                
+                if (isStealMode) {
+                    // Double points for successful steal
+                    const stealPoints = points * 2;
+                    currentPlayer.score += stealPoints; // Add the extra points
+                    currentScore = currentPlayer.score; 
+                    updateScore();
+                    
+                    setStatus(`🎯 Steal successful! ${currentPlayer.name} +$${stealPoints} (double points!)`);
+                    // Reset to original player for next question
+                    currentPlayerIndex = originalPlayerIndex;
+                    isStealMode = false;
+                    updateCurrentPlayerDisplay();
+                } else {
+                    setStatus(`✅ Correct! ${currentPlayer.name} +$${points}`);
+                }
                 autoSave();
             }
         }
 
         function markIncorrect() {
             if (currentPlayCell && boardData.players.length > 0) {
+                if (!isStealMode && boardData.players.length > 1) {
+                    // Show steal option instead of immediately marking incorrect
+                    const stealBtn = document.getElementById('stealBtn');
+                    stealBtn.style.display = 'inline-block';
+                    document.querySelector('[onclick="markIncorrect()"]').style.display = 'none';
+                    document.querySelector('[onclick="markCorrect()"]').style.display = 'none';
+                    
+                    const currentPlayer = boardData.players[currentPlayerIndex];
+                    setStatus(`❌ ${currentPlayer.name} got it wrong. Other players can steal!`);
+                    return;
+                }
+                
                 const cellData = boardData.cells[currentPlayCell.index];
                 const points = parseInt(cellData.value.replace('$', '')) || 0;
                 const currentPlayer = boardData.players[currentPlayerIndex];
@@ -1046,14 +1081,101 @@
                 
                 playSound('incorrect');
                 closePlayModal();
-                setStatus(`❌ Incorrect! ${currentPlayer.name} -$${points}`);
+                
+                if (isStealMode) {
+                    setStatus(`❌ No steal! ${currentPlayer.name} -$${points}`);
+                    // Reset to original player
+                    currentPlayerIndex = originalPlayerIndex;
+                    isStealMode = false;
+                    updateCurrentPlayerDisplay();
+                } else {
+                    setStatus(`❌ Incorrect! ${currentPlayer.name} -$${points}`);
+                }
                 autoSave();
             }
+        }
+
+        function enableSteal() {
+            if (boardData.players.length <= 1) return;
+            
+            // Store original player who got it wrong
+            originalPlayerIndex = currentPlayerIndex;
+            const originalPlayer = boardData.players[originalPlayerIndex];
+            
+            // Deduct points from original player
+            const cellData = boardData.cells[currentPlayCell.index];
+            const points = parseInt(cellData.value.replace('$', '')) || 0;
+            originalPlayer.score -= points;
+            
+            // Show player selection interface
+            const stealSelection = document.getElementById('stealPlayerSelection');
+            const stealButtonsContainer = document.getElementById('stealPlayerButtons');
+            
+            // Create buttons for each player (except the original player)
+            let buttonsHtml = '';
+            boardData.players.forEach((player, index) => {
+                if (index !== originalPlayerIndex) {
+                    buttonsHtml += `
+                        <button class="btn" onclick="selectPlayerForSteal(${index})" 
+                                style="background: #ff6b35; color: white; margin: 5px;">
+                            ${player.name} ($${player.score})
+                        </button>
+                    `;
+                }
+            });
+            
+            stealButtonsContainer.innerHTML = buttonsHtml;
+            stealSelection.style.display = 'block';
+            
+            // Hide all other buttons
+            document.getElementById('stealBtn').style.display = 'none';
+            document.querySelector('[onclick="markIncorrect()"]').style.display = 'none';
+            document.querySelector('[onclick="markCorrect()"]').style.display = 'none';
+            
+            // Update the modal to show steal mode
+            document.getElementById('playModalCategory').style.background = '#ff6b35';
+            document.getElementById('playModalCategory').innerHTML = '🔄 STEAL OPPORTUNITY';
+            
+            // Update score display immediately
+            updateScore();
+            updateCurrentPlayerDisplay();
+            
+            setStatus(`💰 ${originalPlayer.name} lost $${points}. Choose who gets to steal!`);
+            playSound('start');
+        }
+        
+        function selectPlayerForSteal(playerIndex) {
+            // Set the stealing player as current
+            currentPlayerIndex = playerIndex;
+            isStealMode = true;
+            
+            // Hide player selection and show answer buttons
+            document.getElementById('stealPlayerSelection').style.display = 'none';
+            document.querySelector('[onclick="markIncorrect()"]').style.display = 'inline-block';
+            document.querySelector('[onclick="markCorrect()"]').style.display = 'inline-block';
+            
+            const stealingPlayer = boardData.players[playerIndex];
+            setStatus(`🎯 ${stealingPlayer.name} is attempting to steal!`);
+            updateCurrentPlayerDisplay();
         }
 
         function closePlayModal() {
             document.getElementById('playModal').style.display = 'none';
             currentPlayCell = null;
+            
+            // Reset steal mode
+            if (isStealMode) {
+                isStealMode = false;
+                currentPlayerIndex = originalPlayerIndex;
+            }
+            
+            // Reset modal appearance
+            document.getElementById('playModalCategory').style.background = '';
+            document.getElementById('stealBtn').style.display = 'none';
+            document.getElementById('stealPlayerSelection').style.display = 'none';
+            document.querySelector('[onclick="markIncorrect()"]').style.display = 'inline-block';
+            document.querySelector('[onclick="markCorrect()"]').style.display = 'inline-block';
+            updateCurrentPlayerDisplay();
         }
 
         function updateScore() {
