@@ -87,6 +87,145 @@
             background: #e0a800;
         }
 
+        .btn-play {
+            background: #28a745;
+            color: white;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        .btn-play:hover {
+            background: #218838;
+        }
+
+        .btn-edit {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #5a6268;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+        }
+
+        @keyframes flipIn {
+            from {
+                transform: rotateY(-90deg);
+                opacity: 0;
+            }
+            to {
+                transform: rotateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes zoomIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .play-mode {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .play-mode .header {
+            background: #28a745;
+            animation: zoomIn 0.5s ease-out;
+        }
+
+        .play-mode .header p {
+            display: none;
+        }
+
+        .play-mode .header::after {
+            content: "🎮 PLAY MODE";
+            font-size: 1.2em;
+            display: block;
+            margin-top: 10px;
+            animation: pulse 3s infinite;
+        }
+
+        .play-mode .instructions {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .play-mode .category-cell:hover {
+            background: #218838;
+            transform: scale(1.05);
+            transition: all 0.3s ease;
+        }
+
+        .play-mode .value-cell {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .play-mode .value-cell:hover {
+            background: #218838;
+            transform: scale(1.05) rotate(2deg);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-mode .value-cell:active {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .play-mode .value-cell.revealed {
+            background: #6c757d !important;
+            color: #adb5bd !important;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .play-mode .value-cell.revealed:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .play-mode .jeopardy-board {
+            animation: flipIn 0.8s ease-out;
+        }
+
+        .score-board {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 5px;
+            border: 2px solid #28a745;
+            text-align: center;
+            display: none;
+        }
+
+        .play-mode .score-board {
+            display: block;
+            animation: zoomIn 0.5s ease-out;
+        }
+
+        .score-display {
+            font-size: 2em;
+            font-weight: bold;
+            color: #28a745;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
         .status {
             margin-left: auto;
             font-size: 14px;
@@ -289,17 +428,26 @@
         </div>
 
         <div class="controls">
-            <button class="btn btn-success" onclick="saveBoard()">💾 Save Board</button>
-            <button class="btn btn-primary" onclick="loadBoard()">📂 Load Board</button>
-            <button class="btn btn-warning" onclick="exportBoard()">📤 Export</button>
-            <button class="btn btn-primary" onclick="importBoard()">📥 Import</button>
-            <button class="btn btn-primary" onclick="clearBoard()">🗑️ Clear All</button>
+            <button class="btn btn-play" id="playBtn" onclick="togglePlayMode()">🎮 Play Mode</button>
+            <div id="editControls">
+                <button class="btn btn-success" onclick="saveBoard()">💾 Save Board</button>
+                <button class="btn btn-primary" onclick="loadBoard()">📂 Load Board</button>
+                <button class="btn btn-warning" onclick="exportBoard()">📤 Export</button>
+                <button class="btn btn-primary" onclick="importBoard()">📥 Import</button>
+                <button class="btn btn-primary" onclick="clearBoard()">🗑️ Clear All</button>
+            </div>
             <div class="status" id="status">Ready</div>
         </div>
 
-        <div class="instructions">
-            <h3>How to Use:</h3>
-            <ul>
+        <div class="score-board" id="scoreBoard">
+            <h3>🏆 Current Score</h3>
+            <div class="score-display" id="scoreDisplay">$0</div>
+            <button class="btn btn-warning" onclick="resetScore()">Reset Score</button>
+        </div>
+
+        <div class="instructions" id="instructions">
+            <h3 id="instructionsTitle">How to Use:</h3>
+            <ul id="instructionsList">
                 <li>Click on any cell to edit the content</li>
                 <li>Category cells are for your question categories</li>
                 <li>Value cells show point values and questions</li>
@@ -310,23 +458,47 @@
 
         <div class="jeopardy-board" id="board">
             <!-- Categories Row -->
-            <div class="category-cell" onclick="editCell(this, 'category', 0)">
+            <div class="category-cell" onclick="handleCellClick(this, 'category', 0)">
                 <div class="cell-content">CATEGORY 1</div>
             </div>
-            <div class="category-cell" onclick="editCell(this, 'category', 1)">
+            <div class="category-cell" onclick="handleCellClick(this, 'category', 1)">
                 <div class="cell-content">CATEGORY 2</div>
             </div>
-            <div class="category-cell" onclick="editCell(this, 'category', 2)">
+            <div class="category-cell" onclick="handleCellClick(this, 'category', 2)">
                 <div class="cell-content">CATEGORY 3</div>
             </div>
-            <div class="category-cell" onclick="editCell(this, 'category', 3)">
+            <div class="category-cell" onclick="handleCellClick(this, 'category', 3)">
                 <div class="cell-content">CATEGORY 4</div>
             </div>
-            <div class="category-cell" onclick="editCell(this, 'category', 4)">
+            <div class="category-cell" onclick="handleCellClick(this, 'category', 4)">
                 <div class="cell-content">CATEGORY 5</div>
             </div>
 
             <!-- Value Rows -->
+        </div>
+    </div>
+
+    <!-- Play Modal -->
+    <div class="modal" id="playModal">
+        <div class="modal-content">
+            <h3 id="playModalCategory">CATEGORY</h3>
+            <div class="form-group">
+                <h2 id="playModalValue" style="color: #ffd700; text-align: center; font-size: 2em;">$200</h2>
+            </div>
+            <div class="form-group">
+                <div id="playModalQuestion" style="font-size: 1.5em; text-align: center; margin: 30px 0; padding: 20px; background: #e7f3ff; border-radius: 10px;"></div>
+            </div>
+            <div class="form-group" id="answerSection" style="display: none;">
+                <div style="text-align: center; margin: 20px 0;">
+                    <button class="btn btn-success" onclick="revealAnswer()">🔍 Reveal Answer</button>
+                </div>
+                <div id="playModalAnswer" style="font-size: 1.3em; text-align: center; margin: 30px 0; padding: 20px; background: #d4edda; border-radius: 10px; display: none;"></div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-success" onclick="markCorrect()">✅ Correct</button>
+                <button class="btn btn-warning" onclick="markIncorrect()">❌ Incorrect</button>
+                <button class="btn" onclick="closePlayModal()" style="background: #6c757d; color: white;">Close</button>
+            </div>
         </div>
     </div>
 
@@ -357,6 +529,10 @@
         let currentCell = null;
         let currentCellType = null;
         let currentIndex = null;
+        let isPlayMode = false;
+        let currentScore = 0;
+        let revealedCells = new Set();
+        let currentPlayCell = null;
         let boardData = {
             categories: ['CATEGORY 1', 'CATEGORY 2', 'CATEGORY 3', 'CATEGORY 4', 'CATEGORY 5'],
             cells: []
@@ -374,7 +550,7 @@
                     
                     const cell = document.createElement('div');
                     cell.className = 'value-cell';
-                    cell.onclick = () => editCell(cell, 'value', cellIndex);
+                    cell.onclick = () => handleCellClick(cell, 'value', cellIndex);
                     
                     const content = document.createElement('div');
                     content.className = 'cell-content';
@@ -618,6 +794,219 @@
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', initializeBoard);
+
+        // New functions for Play Mode
+        function togglePlayMode() {
+            isPlayMode = !isPlayMode;
+            const body = document.body;
+            const playBtn = document.getElementById('playBtn');
+            const editControls = document.getElementById('editControls');
+            const instructions = document.getElementById('instructions');
+            const instructionsTitle = document.getElementById('instructionsTitle');
+            const instructionsList = document.getElementById('instructionsList');
+            
+            if (isPlayMode) {
+                body.classList.add('play-mode');
+                playBtn.innerHTML = '✏️ Edit Mode';
+                playBtn.className = 'btn btn-edit';
+                editControls.style.display = 'none';
+                
+                instructionsTitle.textContent = 'Play Mode Instructions:';
+                instructionsList.innerHTML = `
+                    <li>Click on value cells to reveal questions</li>
+                    <li>Mark answers as correct or incorrect to track score</li>
+                    <li>Revealed cells are grayed out</li>
+                    <li>Have fun playing Jeopardy!</li>
+                `;
+                
+                playSound('start');
+                setStatus('🎮 Play Mode activated! Click cells to play!');
+            } else {
+                body.classList.remove('play-mode');
+                playBtn.innerHTML = '🎮 Play Mode';
+                playBtn.className = 'btn btn-play';
+                editControls.style.display = 'flex';
+                
+                instructionsTitle.textContent = 'How to Use:';
+                instructionsList.innerHTML = `
+                    <li>Click on any cell to edit the content</li>
+                    <li>Category cells are for your question categories</li>
+                    <li>Value cells show point values and questions</li>
+                    <li>Your work is automatically saved every 30 seconds</li>
+                    <li>Use Export/Import to share your board with others</li>
+                `;
+                
+                setStatus('✏️ Edit Mode activated');
+            }
+        }
+
+        function handleCellClick(cell, type, index) {
+            if (isPlayMode) {
+                if (type === 'category') return; // Categories not clickable in play mode
+                if (revealedCells.has(index)) {
+                    playSound('error');
+                    return; // Already revealed
+                }
+                
+                playCell(cell, index);
+            } else {
+                editCell(cell, type, index);
+            }
+        }
+
+        function playCell(cell, index) {
+            const cellData = boardData.cells[index];
+            if (!cellData.question.trim()) {
+                alert('This cell has no question! Please edit it first.');
+                return;
+            }
+            
+            currentPlayCell = { cell, index };
+            const col = index % 5;
+            const category = boardData.categories[col];
+            
+            document.getElementById('playModalCategory').textContent = category;
+            document.getElementById('playModalValue').textContent = cellData.value;
+            document.getElementById('playModalQuestion').textContent = cellData.question;
+            document.getElementById('playModalAnswer').textContent = cellData.answer || 'No answer provided';
+            document.getElementById('answerSection').style.display = 'block';
+            document.getElementById('playModalAnswer').style.display = 'none';
+            
+            document.getElementById('playModal').style.display = 'block';
+            playSound('question');
+        }
+
+        function revealAnswer() {
+            document.getElementById('playModalAnswer').style.display = 'block';
+            playSound('reveal');
+        }
+
+        function markCorrect() {
+            if (currentPlayCell) {
+                const cellData = boardData.cells[currentPlayCell.index];
+                const points = parseInt(cellData.value.replace('$', '')) || 0;
+                currentScore += points;
+                updateScore();
+                
+                revealedCells.add(currentPlayCell.index);
+                currentPlayCell.cell.classList.add('revealed');
+                
+                playSound('correct');
+                closePlayModal();
+                setStatus(`✅ Correct! +$${points}`);
+            }
+        }
+
+        function markIncorrect() {
+            if (currentPlayCell) {
+                const cellData = boardData.cells[currentPlayCell.index];
+                const points = parseInt(cellData.value.replace('$', '')) || 0;
+                currentScore -= points;
+                updateScore();
+                
+                revealedCells.add(currentPlayCell.index);
+                currentPlayCell.cell.classList.add('revealed');
+                
+                playSound('incorrect');
+                closePlayModal();
+                setStatus(`❌ Incorrect! -$${points}`);
+            }
+        }
+
+        function closePlayModal() {
+            document.getElementById('playModal').style.display = 'none';
+            currentPlayCell = null;
+        }
+
+        function updateScore() {
+            const scoreDisplay = document.getElementById('scoreDisplay');
+            const formattedScore = currentScore >= 0 ? `$${currentScore}` : `-$${Math.abs(currentScore)}`;
+            scoreDisplay.textContent = formattedScore;
+            scoreDisplay.style.color = currentScore >= 0 ? '#28a745' : '#dc3545';
+        }
+
+        function resetScore() {
+            if (confirm('Reset the score to $0?')) {
+                currentScore = 0;
+                updateScore();
+                revealedCells.clear();
+                
+                // Remove revealed class from all cells
+                document.querySelectorAll('.value-cell').forEach(cell => {
+                    cell.classList.remove('revealed');
+                });
+                
+                setStatus('Score reset to $0');
+            }
+        }
+
+        // Simple sound effects using Web Audio API
+        function playSound(type) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                switch(type) {
+                    case 'start':
+                        oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+                        oscillator.frequency.setValueAtTime(330, audioContext.currentTime + 0.1);
+                        oscillator.frequency.setValueAtTime(440, audioContext.currentTime + 0.2);
+                        break;
+                    case 'question':
+                        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                        oscillator.frequency.setValueAtTime(660, audioContext.currentTime + 0.1);
+                        break;
+                    case 'reveal':
+                        oscillator.frequency.setValueAtTime(330, audioContext.currentTime);
+                        break;
+                    case 'correct':
+                        oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+                        oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1);
+                        oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.2);
+                        break;
+                    case 'incorrect':
+                        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                        oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.2);
+                        break;
+                    case 'error':
+                        oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+                        break;
+                }
+                
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (error) {
+                // Silently handle audio errors
+            }
+        }
+
+        // Close play modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const editModal = document.getElementById('editModal');
+            const playModal = document.getElementById('playModal');
+            
+            if (event.target === editModal) {
+                closeModal();
+            }
+            if (event.target === playModal) {
+                closePlayModal();
+            }
+        });
+
+        // Close modals with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+                closePlayModal();
+            }
+        });
 
         // Save before page unload
         window.addEventListener('beforeunload', autoSave);
