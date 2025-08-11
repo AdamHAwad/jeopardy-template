@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy Template Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #0066cc;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background: #0066cc;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .status {
+            margin-left: auto;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .jeopardy-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px;
+            background: #0066cc;
+            padding: 2px;
+            margin: 20px;
+        }
+
+        .category-cell {
+            background: #0066cc;
+            color: white;
+            padding: 20px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            text-transform: uppercase;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .category-cell:hover {
+            background: #0056b3;
+        }
+
+        .value-cell {
+            background: #0066cc;
+            color: #ffd700;
+            padding: 20px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 24px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            position: relative;
+        }
+
+        .value-cell:hover {
+            background: #0056b3;
+        }
+
+        .cell-content {
+            width: 100%;
+            text-align: center;
+        }
+
+        .editable {
+            background: transparent;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            outline: none;
+            color: inherit;
+            font-size: inherit;
+            font-weight: inherit;
+            text-align: center;
+            width: 100%;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .editable:focus {
+            border-color: #ffd700;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #0066cc;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #0066cc;
+            outline: none;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .instructions {
+            background: #e7f3ff;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+        }
+
+        .instructions h3 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+
+        .instructions ul {
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .jeopardy-board {
+                margin: 10px;
+                gap: 1px;
+                padding: 1px;
+            }
+
+            .category-cell,
+            .value-cell {
+                padding: 15px 5px;
+                font-size: 16px;
+                min-height: 60px;
+            }
+
+            .value-cell {
+                font-size: 18px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .status {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>JEOPARDY!</h1>
+            <p>Template Builder</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-success" onclick="saveBoard()">💾 Save Board</button>
+            <button class="btn btn-primary" onclick="loadBoard()">📂 Load Board</button>
+            <button class="btn btn-warning" onclick="exportBoard()">📤 Export</button>
+            <button class="btn btn-primary" onclick="importBoard()">📥 Import</button>
+            <button class="btn btn-primary" onclick="clearBoard()">🗑️ Clear All</button>
+            <div class="status" id="status">Ready</div>
+        </div>
+
+        <div class="instructions">
+            <h3>How to Use:</h3>
+            <ul>
+                <li>Click on any cell to edit the content</li>
+                <li>Category cells are for your question categories</li>
+                <li>Value cells show point values and questions</li>
+                <li>Your work is automatically saved every 30 seconds</li>
+                <li>Use Export/Import to share your board with others</li>
+            </ul>
+        </div>
+
+        <div class="jeopardy-board" id="board">
+            <!-- Categories Row -->
+            <div class="category-cell" onclick="editCell(this, 'category', 0)">
+                <div class="cell-content">CATEGORY 1</div>
+            </div>
+            <div class="category-cell" onclick="editCell(this, 'category', 1)">
+                <div class="cell-content">CATEGORY 2</div>
+            </div>
+            <div class="category-cell" onclick="editCell(this, 'category', 2)">
+                <div class="cell-content">CATEGORY 3</div>
+            </div>
+            <div class="category-cell" onclick="editCell(this, 'category', 3)">
+                <div class="cell-content">CATEGORY 4</div>
+            </div>
+            <div class="category-cell" onclick="editCell(this, 'category', 4)">
+                <div class="cell-content">CATEGORY 5</div>
+            </div>
+
+            <!-- Value Rows -->
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Edit Cell</h3>
+            <div class="form-group">
+                <label for="cellValue">Display Text:</label>
+                <input type="text" id="cellValue" placeholder="Enter the text to display...">
+            </div>
+            <div class="form-group" id="questionGroup" style="display: none;">
+                <label for="cellQuestion">Question:</label>
+                <textarea id="cellQuestion" placeholder="Enter the Jeopardy question..."></textarea>
+            </div>
+            <div class="form-group" id="answerGroup" style="display: none;">
+                <label for="cellAnswer">Answer:</label>
+                <textarea id="cellAnswer" placeholder="Enter the answer..."></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="saveCell()">Save</button>
+                <button class="btn" onclick="closeModal()" style="background: #6c757d; color: white;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCell = null;
+        let currentCellType = null;
+        let currentIndex = null;
+        let boardData = {
+            categories: ['CATEGORY 1', 'CATEGORY 2', 'CATEGORY 3', 'CATEGORY 4', 'CATEGORY 5'],
+            cells: []
+        };
+
+        // Initialize the board
+        function initializeBoard() {
+            const board = document.getElementById('board');
+            
+            // Generate value cells (10 rows × 5 columns = 50 cells)
+            for (let row = 0; row < 10; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const cellIndex = row * 5 + col;
+                    const value = (row + 1) * 100;
+                    
+                    const cell = document.createElement('div');
+                    cell.className = 'value-cell';
+                    cell.onclick = () => editCell(cell, 'value', cellIndex);
+                    
+                    const content = document.createElement('div');
+                    content.className = 'cell-content';
+                    content.textContent = `$${value}`;
+                    
+                    cell.appendChild(content);
+                    board.appendChild(cell);
+                    
+                    // Initialize cell data
+                    boardData.cells[cellIndex] = {
+                        value: `$${value}`,
+                        question: '',
+                        answer: ''
+                    };
+                }
+            }
+            
+            loadSavedBoard();
+            setStatus('Board initialized');
+        }
+
+        function editCell(cell, type, index) {
+            currentCell = cell;
+            currentCellType = type;
+            currentIndex = index;
+            
+            const modal = document.getElementById('editModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const cellValue = document.getElementById('cellValue');
+            const questionGroup = document.getElementById('questionGroup');
+            const answerGroup = document.getElementById('answerGroup');
+            const cellQuestion = document.getElementById('cellQuestion');
+            const cellAnswer = document.getElementById('cellAnswer');
+            
+            if (type === 'category') {
+                modalTitle.textContent = 'Edit Category';
+                cellValue.value = boardData.categories[index];
+                questionGroup.style.display = 'none';
+                answerGroup.style.display = 'none';
+            } else {
+                modalTitle.textContent = 'Edit Question Cell';
+                cellValue.value = boardData.cells[index].value;
+                cellQuestion.value = boardData.cells[index].question;
+                cellAnswer.value = boardData.cells[index].answer;
+                questionGroup.style.display = 'block';
+                answerGroup.style.display = 'block';
+            }
+            
+            modal.style.display = 'block';
+            cellValue.focus();
+        }
+
+        function saveCell() {
+            const cellValue = document.getElementById('cellValue').value.trim();
+            const cellQuestion = document.getElementById('cellQuestion').value.trim();
+            const cellAnswer = document.getElementById('cellAnswer').value.trim();
+            
+            if (currentCellType === 'category') {
+                boardData.categories[currentIndex] = cellValue || `CATEGORY ${currentIndex + 1}`;
+                currentCell.querySelector('.cell-content').textContent = boardData.categories[currentIndex];
+            } else {
+                boardData.cells[currentIndex] = {
+                    value: cellValue || `$${((Math.floor(currentIndex / 5) + 1) * 100)}`,
+                    question: cellQuestion,
+                    answer: cellAnswer
+                };
+                currentCell.querySelector('.cell-content').textContent = boardData.cells[currentIndex].value;
+            }
+            
+            closeModal();
+            autoSave();
+            setStatus('Cell updated');
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentCell = null;
+            currentCellType = null;
+            currentIndex = null;
+        }
+
+        function saveBoard() {
+            try {
+                localStorage.setItem('jeopardy-board', JSON.stringify(boardData));
+                localStorage.setItem('jeopardy-board-timestamp', new Date().toISOString());
+                setStatus('Board saved successfully!');
+            } catch (error) {
+                setStatus('Error saving board: ' + error.message);
+            }
+        }
+
+        function loadBoard() {
+            const saved = localStorage.getItem('jeopardy-board');
+            if (saved) {
+                loadSavedBoard();
+                setStatus('Board loaded successfully!');
+            } else {
+                setStatus('No saved board found');
+            }
+        }
+
+        function loadSavedBoard() {
+            try {
+                const saved = localStorage.getItem('jeopardy-board');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    boardData = { ...boardData, ...data };
+                    
+                    // Update category cells
+                    const categoryElements = document.querySelectorAll('.category-cell');
+                    categoryElements.forEach((cell, index) => {
+                        if (boardData.categories[index]) {
+                            cell.querySelector('.cell-content').textContent = boardData.categories[index];
+                        }
+                    });
+                    
+                    // Update value cells
+                    const valueElements = document.querySelectorAll('.value-cell');
+                    valueElements.forEach((cell, index) => {
+                        if (boardData.cells[index]) {
+                            cell.querySelector('.cell-content').textContent = boardData.cells[index].value;
+                        }
+                    });
+                    
+                    const timestamp = localStorage.getItem('jeopardy-board-timestamp');
+                    if (timestamp) {
+                        const date = new Date(timestamp);
+                        setStatus(`Last saved: ${date.toLocaleString()}`);
+                    }
+                }
+            } catch (error) {
+                setStatus('Error loading board: ' + error.message);
+            }
+        }
+
+        function exportBoard() {
+            const dataStr = JSON.stringify(boardData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `jeopardy-board-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            setStatus('Board exported successfully!');
+        }
+
+        function importBoard() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            boardData = importedData;
+                            loadSavedBoard();
+                            autoSave();
+                            setStatus('Board imported successfully!');
+                        } catch (error) {
+                            setStatus('Error importing board: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        function clearBoard() {
+            if (confirm('Are you sure you want to clear the entire board? This cannot be undone.')) {
+                boardData = {
+                    categories: ['CATEGORY 1', 'CATEGORY 2', 'CATEGORY 3', 'CATEGORY 4', 'CATEGORY 5'],
+                    cells: []
+                };
+                
+                // Reset all cells
+                for (let i = 0; i < 50; i++) {
+                    const row = Math.floor(i / 5);
+                    const value = (row + 1) * 100;
+                    boardData.cells[i] = {
+                        value: `$${value}`,
+                        question: '',
+                        answer: ''
+                    };
+                }
+                
+                loadSavedBoard();
+                autoSave();
+                setStatus('Board cleared');
+            }
+        }
+
+        function autoSave() {
+            try {
+                localStorage.setItem('jeopardy-board', JSON.stringify(boardData));
+                localStorage.setItem('jeopardy-board-timestamp', new Date().toISOString());
+            } catch (error) {
+                console.error('Auto-save failed:', error);
+            }
+        }
+
+        function setStatus(message) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            setTimeout(() => {
+                const timestamp = localStorage.getItem('jeopardy-board-timestamp');
+                if (timestamp) {
+                    const date = new Date(timestamp);
+                    status.textContent = `Last saved: ${date.toLocaleString()}`;
+                } else {
+                    status.textContent = 'Ready';
+                }
+            }, 3000);
+        }
+
+        // Auto-save every 30 seconds
+        setInterval(autoSave, 30000);
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeBoard);
+
+        // Save before page unload
+        window.addEventListener('beforeunload', autoSave);
+    </script>
+</body>
+</html>
