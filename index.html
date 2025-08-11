@@ -686,6 +686,39 @@
             }
         }
 
+        function updateBoardUI() {
+            try {
+                // Update category cells
+                const categoryElements = document.querySelectorAll('.category-cell');
+                categoryElements.forEach((cell, index) => {
+                    if (boardData.categories[index]) {
+                        cell.querySelector('.cell-content').textContent = boardData.categories[index];
+                    }
+                });
+                
+                // Update value cells
+                const valueElements = document.querySelectorAll('.value-cell');
+                valueElements.forEach((cell, index) => {
+                    if (boardData.cells[index]) {
+                        cell.querySelector('.cell-content').textContent = boardData.cells[index].value;
+                        // Remove revealed class when updating UI
+                        cell.classList.remove('revealed');
+                    }
+                });
+                
+                // Clear revealed cells set
+                revealedCells.clear();
+                
+                // Reset score in play mode
+                if (isPlayMode) {
+                    currentScore = 0;
+                    updateScore();
+                }
+            } catch (error) {
+                setStatus('Error updating board: ' + error.message);
+            }
+        }
+
         function exportBoard() {
             const dataStr = JSON.stringify(boardData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -713,8 +746,31 @@
                     reader.onload = function(e) {
                         try {
                             const importedData = JSON.parse(e.target.result);
-                            boardData = importedData;
-                            loadSavedBoard();
+                            
+                            // Validate imported data structure
+                            if (!importedData.categories || !Array.isArray(importedData.categories)) {
+                                throw new Error('Invalid board format: missing categories array');
+                            }
+                            if (!importedData.cells || !Array.isArray(importedData.cells)) {
+                                throw new Error('Invalid board format: missing cells array');
+                            }
+                            
+                            // Ensure we have the right number of categories and cells
+                            if (importedData.categories.length !== 5) {
+                                throw new Error('Invalid board format: must have exactly 5 categories');
+                            }
+                            if (importedData.cells.length !== 50) {
+                                throw new Error('Invalid board format: must have exactly 50 cells');
+                            }
+                            
+                            // Update boardData with imported data
+                            boardData = {
+                                categories: [...importedData.categories],
+                                cells: [...importedData.cells]
+                            };
+                            
+                            // Update the UI directly
+                            updateBoardUI();
                             autoSave();
                             setStatus('Board imported successfully!');
                         } catch (error) {
@@ -745,7 +801,8 @@
                     };
                 }
                 
-                loadSavedBoard();
+                // Update the UI directly
+                updateBoardUI();
                 autoSave();
                 setStatus('Board cleared');
             }
