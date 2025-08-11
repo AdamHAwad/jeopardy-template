@@ -435,14 +435,34 @@
                 <button class="btn btn-warning" onclick="exportBoard()">📤 Export</button>
                 <button class="btn btn-primary" onclick="importBoard()">📥 Import</button>
                 <button class="btn btn-primary" onclick="clearBoard()">🗑️ Clear All</button>
+                <button class="btn btn-primary" onclick="openPlayerModal()">👥 Manage Players</button>
+            </div>
+            <div id="playControls" style="display: none;">
+                <button class="btn btn-success" id="startRoundBtn" onclick="startRound()">▶️ Start Round</button>
+                <button class="btn btn-warning" id="endRoundBtn" onclick="endRound()" style="display: none;">⏸️ End Round</button>
+                <button class="btn btn-primary" onclick="nextPlayer()">👤 Next Player</button>
             </div>
             <div class="status" id="status">Ready</div>
         </div>
 
         <div class="score-board" id="scoreBoard">
-            <h3>🏆 Current Score</h3>
+            <h3>🏆 Game Status</h3>
+            <div id="currentPlayerInfo" style="margin-bottom: 15px;">
+                <div style="font-size: 1.2em; font-weight: bold; color: #0066cc;">Current Player:</div>
+                <div id="currentPlayerName" style="font-size: 1.5em; font-weight: bold; color: #28a745;">No players added</div>
+            </div>
+            <div id="roundStatus" style="margin-bottom: 15px; padding: 10px; background: #e7f3ff; border-radius: 5px; display: none;">
+                <div style="font-size: 1.1em; font-weight: bold;">Round Status: <span id="roundStatusText">Waiting to start</span></div>
+            </div>
             <div class="score-display" id="scoreDisplay">$0</div>
             <button class="btn btn-warning" onclick="resetScore()">Reset Score</button>
+        </div>
+
+        <div class="player-list" id="playerListSection" style="display: none;">
+            <div style="background: #f8f9fa; padding: 15px; margin: 20px; border-radius: 5px; border: 2px solid #0066cc;">
+                <h3 style="color: #0066cc; margin-bottom: 15px;">👥 Players</h3>
+                <div id="playerList" style="margin-bottom: 15px;"></div>
+            </div>
         </div>
 
         <div class="instructions" id="instructions">
@@ -525,6 +545,29 @@
         </div>
     </div>
 
+    <!-- Player Management Modal -->
+    <div class="modal" id="playerModal">
+        <div class="modal-content">
+            <h3>👥 Manage Players</h3>
+            <div class="form-group">
+                <label for="newPlayerName">Add New Player:</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="newPlayerName" placeholder="Enter player name..." style="flex: 1;">
+                    <button class="btn btn-success" onclick="addPlayer()">Add</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Current Players:</label>
+                <div id="modalPlayerList" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px;">
+                    <div id="emptyPlayerMessage" style="text-align: center; color: #6c757d; font-style: italic;">No players added yet</div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="closePlayerModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentCell = null;
         let currentCellType = null;
@@ -535,8 +578,11 @@
         let currentPlayCell = null;
         let boardData = {
             categories: ['CATEGORY 1', 'CATEGORY 2', 'CATEGORY 3', 'CATEGORY 4', 'CATEGORY 5'],
-            cells: []
+            cells: [],
+            players: []
         };
+        let currentPlayerIndex = 0;
+        let isRoundActive = false;
 
         // Initialize the board
         function initializeBoard() {
@@ -569,6 +615,7 @@
             }
             
             loadSavedBoard();
+            updateCurrentPlayerDisplay();
             setStatus('Board initialized');
         }
 
@@ -858,6 +905,7 @@
             const body = document.body;
             const playBtn = document.getElementById('playBtn');
             const editControls = document.getElementById('editControls');
+            const playControls = document.getElementById('playControls');
             const instructions = document.getElementById('instructions');
             const instructionsTitle = document.getElementById('instructionsTitle');
             const instructionsList = document.getElementById('instructionsList');
@@ -867,32 +915,45 @@
                 playBtn.innerHTML = '✏️ Edit Mode';
                 playBtn.className = 'btn btn-edit';
                 editControls.style.display = 'none';
+                playControls.style.display = 'flex';
                 
                 instructionsTitle.textContent = 'Play Mode Instructions:';
                 instructionsList.innerHTML = `
+                    <li>Add players in Edit Mode before playing</li>
+                    <li>Host starts/ends rounds and manages player turns</li>
+                    <li>During a round, only the current player can answer</li>
                     <li>Click on value cells to reveal questions</li>
-                    <li>Mark answers as correct or incorrect to track score</li>
-                    <li>Revealed cells are grayed out</li>
-                    <li>Have fun playing Jeopardy!</li>
+                    <li>Mark answers as correct or incorrect to track scores</li>
+                    <li>Use "Next Player" to rotate turns</li>
                 `;
                 
+                updateCurrentPlayerDisplay();
                 playSound('start');
-                setStatus('🎮 Play Mode activated! Click cells to play!');
+                setStatus('🎮 Play Mode activated!');
             } else {
                 body.classList.remove('play-mode');
                 playBtn.innerHTML = '🎮 Play Mode';
                 playBtn.className = 'btn btn-play';
                 editControls.style.display = 'flex';
+                playControls.style.display = 'none';
+                
+                // End any active round
+                isRoundActive = false;
+                document.getElementById('startRoundBtn').style.display = 'inline-block';
+                document.getElementById('endRoundBtn').style.display = 'none';
+                document.getElementById('roundStatus').style.display = 'none';
                 
                 instructionsTitle.textContent = 'How to Use:';
                 instructionsList.innerHTML = `
                     <li>Click on any cell to edit the content</li>
                     <li>Category cells are for your question categories</li>
                     <li>Value cells show point values and questions</li>
+                    <li>Use "Manage Players" to add players for the game</li>
                     <li>Your work is automatically saved every 30 seconds</li>
                     <li>Use Export/Import to share your board with others</li>
                 `;
                 
+                updateCurrentPlayerDisplay();
                 setStatus('✏️ Edit Mode activated');
             }
         }
@@ -903,6 +964,16 @@
                 if (revealedCells.has(index)) {
                     playSound('error');
                     return; // Already revealed
+                }
+                
+                if (boardData.players.length === 0) {
+                    alert('Please add players before starting the game!');
+                    return;
+                }
+                
+                if (!isRoundActive) {
+                    alert('Please start a round first!');
+                    return;
                 }
                 
                 playCell(cell, index);
@@ -939,34 +1010,44 @@
         }
 
         function markCorrect() {
-            if (currentPlayCell) {
+            if (currentPlayCell && boardData.players.length > 0) {
                 const cellData = boardData.cells[currentPlayCell.index];
                 const points = parseInt(cellData.value.replace('$', '')) || 0;
-                currentScore += points;
+                const currentPlayer = boardData.players[currentPlayerIndex];
+                
+                currentPlayer.score += points;
+                currentScore = currentPlayer.score; // Keep currentScore in sync for display
                 updateScore();
+                updateCurrentPlayerDisplay();
                 
                 revealedCells.add(currentPlayCell.index);
                 currentPlayCell.cell.classList.add('revealed');
                 
                 playSound('correct');
                 closePlayModal();
-                setStatus(`✅ Correct! +$${points}`);
+                setStatus(`✅ Correct! ${currentPlayer.name} +$${points}`);
+                autoSave();
             }
         }
 
         function markIncorrect() {
-            if (currentPlayCell) {
+            if (currentPlayCell && boardData.players.length > 0) {
                 const cellData = boardData.cells[currentPlayCell.index];
                 const points = parseInt(cellData.value.replace('$', '')) || 0;
-                currentScore -= points;
+                const currentPlayer = boardData.players[currentPlayerIndex];
+                
+                currentPlayer.score -= points;
+                currentScore = currentPlayer.score; // Keep currentScore in sync for display
                 updateScore();
+                updateCurrentPlayerDisplay();
                 
                 revealedCells.add(currentPlayCell.index);
                 currentPlayCell.cell.classList.add('revealed');
                 
                 playSound('incorrect');
                 closePlayModal();
-                setStatus(`❌ Incorrect! -$${points}`);
+                setStatus(`❌ Incorrect! ${currentPlayer.name} -$${points}`);
+                autoSave();
             }
         }
 
@@ -977,15 +1058,26 @@
 
         function updateScore() {
             const scoreDisplay = document.getElementById('scoreDisplay');
-            const formattedScore = currentScore >= 0 ? `$${currentScore}` : `-$${Math.abs(currentScore)}`;
-            scoreDisplay.textContent = formattedScore;
-            scoreDisplay.style.color = currentScore >= 0 ? '#28a745' : '#dc3545';
+            if (boardData.players.length > 0) {
+                const currentPlayer = boardData.players[currentPlayerIndex];
+                const formattedScore = currentPlayer.score >= 0 ? `$${currentPlayer.score}` : `-$${Math.abs(currentPlayer.score)}`;
+                scoreDisplay.textContent = formattedScore;
+                scoreDisplay.style.color = currentPlayer.score >= 0 ? '#28a745' : '#dc3545';
+            } else {
+                scoreDisplay.textContent = '$0';
+                scoreDisplay.style.color = '#28a745';
+            }
         }
 
         function resetScore() {
-            if (confirm('Reset the score to $0?')) {
+            if (confirm('Reset all players\' scores and reveal all cells?')) {
+                // Reset all player scores
+                boardData.players.forEach(player => {
+                    player.score = 0;
+                });
                 currentScore = 0;
                 updateScore();
+                updateCurrentPlayerDisplay();
                 revealedCells.clear();
                 
                 // Remove revealed class from all cells
@@ -993,7 +1085,14 @@
                     cell.classList.remove('revealed');
                 });
                 
-                setStatus('Score reset to $0');
+                // End any active round
+                isRoundActive = false;
+                document.getElementById('startRoundBtn').style.display = 'inline-block';
+                document.getElementById('endRoundBtn').style.display = 'none';
+                document.getElementById('roundStatus').style.display = 'none';
+                
+                autoSave();
+                setStatus('All scores reset and board cleared');
             }
         }
 
@@ -1044,10 +1143,11 @@
             }
         }
 
-        // Close play modal when clicking outside
+        // Close modals when clicking outside
         window.addEventListener('click', function(event) {
             const editModal = document.getElementById('editModal');
             const playModal = document.getElementById('playModal');
+            const playerModal = document.getElementById('playerModal');
             
             if (event.target === editModal) {
                 closeModal();
@@ -1055,13 +1155,180 @@
             if (event.target === playModal) {
                 closePlayModal();
             }
+            if (event.target === playerModal) {
+                closePlayerModal();
+            }
         });
+
+        // Player Management Functions
+        function openPlayerModal() {
+            document.getElementById('playerModal').style.display = 'block';
+            updateModalPlayerList();
+            document.getElementById('newPlayerName').focus();
+        }
+
+        function closePlayerModal() {
+            document.getElementById('playerModal').style.display = 'none';
+        }
+
+        function addPlayer() {
+            const nameInput = document.getElementById('newPlayerName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            if (boardData.players.some(player => player.name.toLowerCase() === name.toLowerCase())) {
+                alert('A player with this name already exists');
+                return;
+            }
+            
+            boardData.players.push({
+                name: name,
+                score: 0
+            });
+            
+            nameInput.value = '';
+            updateModalPlayerList();
+            updateCurrentPlayerDisplay();
+            autoSave();
+            setStatus(`Player "${name}" added`);
+        }
+
+        function removePlayer(index) {
+            const player = boardData.players[index];
+            if (confirm(`Remove player "${player.name}"?`)) {
+                boardData.players.splice(index, 1);
+                
+                // Reset current player index if needed
+                if (currentPlayerIndex >= boardData.players.length) {
+                    currentPlayerIndex = 0;
+                }
+                
+                updateModalPlayerList();
+                updateCurrentPlayerDisplay();
+                autoSave();
+                setStatus(`Player "${player.name}" removed`);
+            }
+        }
+
+        function updateModalPlayerList() {
+            const playerListDiv = document.getElementById('modalPlayerList');
+            const emptyMessage = document.getElementById('emptyPlayerMessage');
+            
+            if (boardData.players.length === 0) {
+                emptyMessage.style.display = 'block';
+                return;
+            }
+            
+            emptyMessage.style.display = 'none';
+            
+            let playersHtml = '';
+            boardData.players.forEach((player, index) => {
+                playersHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #dee2e6; ${index === currentPlayerIndex && isPlayMode ? 'background: #e7f3ff; font-weight: bold;' : ''}">
+                        <span>${player.name} (Score: $${player.score})</span>
+                        <button class="btn" onclick="removePlayer(${index})" style="background: #dc3545; color: white; padding: 4px 8px; font-size: 12px;">Remove</button>
+                    </div>
+                `;
+            });
+            
+            playerListDiv.innerHTML = emptyMessage.outerHTML + playersHtml;
+        }
+
+        function updateCurrentPlayerDisplay() {
+            const currentPlayerNameEl = document.getElementById('currentPlayerName');
+            const playerListSection = document.getElementById('playerListSection');
+            
+            if (boardData.players.length === 0) {
+                currentPlayerNameEl.textContent = 'No players added';
+                currentPlayerNameEl.style.color = '#6c757d';
+                playerListSection.style.display = 'none';
+            } else {
+                const currentPlayer = boardData.players[currentPlayerIndex] || boardData.players[0];
+                currentPlayerNameEl.textContent = currentPlayer.name;
+                currentPlayerNameEl.style.color = '#28a745';
+                
+                if (isPlayMode) {
+                    playerListSection.style.display = 'block';
+                    updatePlayerListDisplay();
+                } else {
+                    playerListSection.style.display = 'none';
+                }
+            }
+        }
+
+        function updatePlayerListDisplay() {
+            const playerListDiv = document.getElementById('playerList');
+            let playersHtml = '';
+            
+            boardData.players.forEach((player, index) => {
+                const isCurrentPlayer = index === currentPlayerIndex;
+                playersHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 5px; border-radius: 5px; ${isCurrentPlayer ? 'background: #28a745; color: white; font-weight: bold;' : 'background: white; border: 1px solid #dee2e6;'}">
+                        <span>${player.name}</span>
+                        <span>$${player.score}</span>
+                    </div>
+                `;
+            });
+            
+            playerListDiv.innerHTML = playersHtml;
+        }
+
+        // Round Management Functions
+        function startRound() {
+            if (boardData.players.length === 0) {
+                alert('Please add players before starting a round');
+                return;
+            }
+            
+            isRoundActive = true;
+            document.getElementById('startRoundBtn').style.display = 'none';
+            document.getElementById('endRoundBtn').style.display = 'inline-block';
+            document.getElementById('roundStatus').style.display = 'block';
+            document.getElementById('roundStatusText').textContent = 'In Progress';
+            
+            playSound('start');
+            setStatus(`Round started! ${boardData.players[currentPlayerIndex].name}'s turn`);
+        }
+
+        function endRound() {
+            isRoundActive = false;
+            document.getElementById('startRoundBtn').style.display = 'inline-block';
+            document.getElementById('endRoundBtn').style.display = 'none';
+            document.getElementById('roundStatus').style.display = 'none';
+            
+            setStatus('Round ended');
+        }
+
+        function nextPlayer() {
+            if (boardData.players.length <= 1) return;
+            
+            currentPlayerIndex = (currentPlayerIndex + 1) % boardData.players.length;
+            updateCurrentPlayerDisplay();
+            
+            if (isRoundActive) {
+                setStatus(`Now ${boardData.players[currentPlayerIndex].name}'s turn`);
+            } else {
+                setStatus(`Current player: ${boardData.players[currentPlayerIndex].name}`);
+            }
+        }
 
         // Close modals with Escape key
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 closeModal();
                 closePlayModal();
+                closePlayerModal();
+            }
+        });
+
+        // Handle Enter key in player name input
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && event.target.id === 'newPlayerName') {
+                addPlayer();
             }
         });
 
